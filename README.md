@@ -106,17 +106,6 @@ Uwierzytelnianie: **HTTP Basic**. W Postmanie: zakładka Authorization, typ Basi
 | `ZamowienieServiceTest` | Serwis: złożenie zamówienia czyści koszyk, zatwierdzenie do wysyłki zmienia status |
 | `ApiSecurityIntegrationTest` | Ochrona endpointów: 401 bez logowania, 403 przy złej roli, 200/201 z poprawną rolą |
 
-## Znane literówki z diagramu (poprawione w kodzie)
-
-| W diagramie | W kodzie Java |
-|-------------|---------------|
-| `autoryzujDostadiagramwy()` | `autoryzujDostawy()` (do poprawy w UML) |
-| `data dataWystawienia` w `Dostawa` | `dataNadania` |
-| `data decyzji` w `Zwrot` | `dataDecyzji` (do implementacji) |
-| `nrKuriera` | `numerPrzesylki` |
-| `statusZamowienia` jako String | enum `StatusZamowienia` |
-| `metodaPlatnosci` jako String | enum `MetodaPlatnosci` |
-
 ## Co jeszcze nie jest zaimplementowane
 
 - Encje użytkowników (`Uzytkownik`, `Klient`, `Pracownik`, `Kierownik`, `Administrator`) jako obiekty domenowe z `hasloHash`
