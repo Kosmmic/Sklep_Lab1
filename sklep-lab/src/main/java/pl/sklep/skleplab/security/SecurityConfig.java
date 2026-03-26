@@ -30,6 +30,7 @@ public class SecurityConfig {
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
 				.csrf(AbstractHttpConfigurer::disable)
+				//.sessionManagment(session ->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) to dodac
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/actuator/health", "/api/v1/ping").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/towary").permitAll()
