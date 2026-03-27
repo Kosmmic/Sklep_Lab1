@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import pl.sklep.skleplab.domain.Administrator;
+import pl.sklep.skleplab.domain.Kierownik;
+import pl.sklep.skleplab.domain.Klient;
+import pl.sklep.skleplab.domain.Pracownik;
 import pl.sklep.skleplab.domain.Rola;
 import pl.sklep.skleplab.domain.Uzytkownik;
 import pl.sklep.skleplab.security.JwtProvider;
@@ -51,7 +55,14 @@ public class AuthController {
             .map(Rola::valueOf)
             .orElseThrow(() -> new IllegalStateException("Brak roli uzytkownika"));
 
-        Uzytkownik user = new Uzytkownik(userDetails.getUsername(), "hash", rola);
+        // mapowanie Spring Security -> encja domenowa (hasloHash już jest zwracane jako hash z UserDetails)
+        String hasloHash = userDetails.getPassword();
+        Uzytkownik user = switch (rola) {
+            case CLIENT -> new Klient(userDetails.getUsername(), hasloHash);
+            case EMPLOYEE -> new Pracownik(userDetails.getUsername(), hasloHash, "demo-employee");
+            case MANAGER -> new Kierownik(userDetails.getUsername(), hasloHash, "demo-department");
+            case ADMIN -> new Administrator(userDetails.getUsername(), hasloHash);
+        };
         String token = jwtProvider.generateToken(user);
         return Map.of("token", token);
     }

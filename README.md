@@ -85,6 +85,11 @@ sklep-lab/src/main/java/pl/sklep/skleplab/
 | `Dostawa`           | `Dostawa`                         | Przesyłka powiązana 1:1 z zamówieniem                                     |
 | `StatusZamowienia`  | `statusZamowienia` (String w UML) | Enum: `NOWE`, `OPLACONE`, `W_REALIZACJI`, `WYSLANE`, `ANULOWANE`          |
 | `MetodaPlatnosci`   | `metodaPlatnosci` (String w UML)  | Enum: `PRZELEW`, `BLIK`, `KARTA`, `GOTOWKA_PRZY_ODBIORZE`                 |
+| `Uzytkownik` (+ `Klient` / `Pracownik` / `Kierownik` / `Administrator`) | `Uzytkownik` i jego specjalizacje | Encja bazowa z `hasloHash` + typ roli (UML role) |
+| `Zwrot`             | `Zwrot`                           | Encja zwrotu i zmiany statusu w scenariuszu zwrotu                      |
+| `StatusZwrotu`     | —                                 | Enum statusów procesu zwrotu                                              |
+| `ZgloszenieProduktowe` (+ `Reklamacja`, `GwarancjaDostawcy`) | `ZgloszenieProduktowe` | Abstrakcja wspólna dla reklamacji i gwarancji                              |
+| `StatusZgloszeniaProduktowego` | —                                 | Enum statusów zgłoszeń produktowych                                      |
 
 
 ### Serwisy i repozytoria
@@ -98,6 +103,15 @@ sklep-lab/src/main/java/pl/sklep/skleplab/
 | `ZamowienieService`                | `ProcesZamowieniaKlient` + `ProcesowanieZamowien` | Złożenie zamówienia z koszyka, zatwierdzenie do wysyłki |
 | `ZamowienieRepository` (interfejs) | —                                                 | CRUD zamówień (port pod podmianę na pliki/JPA)          |
 | `InMemoryZamowienieRepository`     | —                                                 | Implementacja: dane w pamięci                           |
+| `ZwrotService`                     | `ZwrotKlient` / `ZwrotObslugaPracownik` / `ZwrotDecyzjaKierownik` (fragment) | Use case procesu zwrotu |
+| `ZwrotRepository` (interfejs)     | —                                                 | Port dostępu do encji zwrotu                               |
+| `InMemoryZwrotRepository`         | —                                                 | Implementacja: dane w pamięci                           |
+| `ReklamacjaService`               | `ReklamacjaKlient` / `ReklamacjaObslugaPracownik` / `ReklamacjaDecyzjaKierownik` (fragment) | Use case procesu reklamacji |
+| `ReklamacjaRepository` (interfejs) | —                                                 | Port dostępu do encji reklamacji                       |
+| `InMemoryReklamacjaRepository`   | —                                                 | Implementacja: dane w pamięci                           |
+| `GwarancjaDostawcyService`        | Analogicznie do procesu reklamacji                 | Use case procesu gwarancji dostawcy |
+| `GwarancjaDostawcyRepository` (interfejs) | —                                                 | Port dostępu do encji gwarancji                       |
+| `InMemoryGwarancjaDostawcyRepository` | —                                              | Implementacja: dane w pamięci                           |
 
 
 ## Endpointy REST
@@ -113,6 +127,24 @@ sklep-lab/src/main/java/pl/sklep/skleplab/
 | `POST` | `/api/v1/zamowienia`              | CLIENT                   | Złożenie zamówienia — body: `{"metodaPlatnosci":"PRZELEW"}` |
 | `GET`  | `/api/v1/zamowienia`              | EMPLOYEE, MANAGER, ADMIN | Lista zamówień                                              |
 | `POST` | `/api/v1/zamowienia/{id}/wysylka` | EMPLOYEE, MANAGER, ADMIN | Zmiana statusu na WYSLANE                                   |
+| `POST` | `/api/v1/zamowienia/{id}/zwrot`  | CLIENT                   | Zgłoszenie zwrotu                                         |
+| `POST` | `/api/v1/zwroty/{id}/weryfikacja` | EMPLOYEE                 | Weryfikacja stanu zwrotu (pracownik)                     |
+| `POST` | `/api/v1/zwroty/{id}/odbior`      | EMPLOYEE                 | Potwierdzenie odbioru paczki (pracownik)                |
+| `POST` | `/api/v1/zwroty/{id}/akceptacja` | MANAGER, ADMIN           | Decyzja kierownika: akceptacja                           |
+| `POST` | `/api/v1/zwroty/{id}/odrzucenie`  | MANAGER, ADMIN          | Decyzja kierownika: odrzucenie                           |
+| `POST` | `/api/v1/zwroty/{id}/zwrot-srodkow` | MANAGER, ADMIN       | Realizacja zwrotu środków (demo)                       |
+| `POST` | `/api/v1/zamowienia/{id}/reklamacja` | CLIENT                | Zgłoszenie reklamacji                                    |
+| `POST` | `/api/v1/reklamacje/{id}/weryfikacja` | EMPLOYEE             | Weryfikacja reklamacji (pracownik)                      |
+| `POST` | `/api/v1/reklamacje/{id}/zdjecia` | EMPLOYEE                | Dodanie zdjęć weryfikacyjnych (pracownik)              |
+| `POST` | `/api/v1/reklamacje/{id}/akceptacja` | MANAGER, ADMIN       | Decyzja kierownika: akceptacja                           |
+| `POST` | `/api/v1/reklamacje/{id}/odrzucenie` | MANAGER, ADMIN       | Decyzja kierownika: odrzucenie                           |
+| `POST` | `/api/v1/reklamacje/{id}/zwrot-do-dostawcy` | MANAGER, ADMIN | Zlecenie zwrotu do dostawcy (demo)                      |
+| `POST` | `/api/v1/zamowienia/{id}/gwarancja` | CLIENT                | Zgłoszenie gwarancji dostawcy                           |
+| `POST` | `/api/v1/gwarancje/{id}/weryfikacja` | EMPLOYEE             | Weryfikacja gwarancji (pracownik)                      |
+| `POST` | `/api/v1/gwarancje/{id}/zdjecia` | EMPLOYEE                | Dodanie zdjęć weryfikacyjnych (pracownik)              |
+| `POST` | `/api/v1/gwarancje/{id}/akceptacja` | MANAGER, ADMIN       | Decyzja kierownika: akceptacja                           |
+| `POST` | `/api/v1/gwarancje/{id}/odrzucenie` | MANAGER, ADMIN       | Decyzja kierownika: odrzucenie                           |
+| `POST` | `/api/v1/gwarancje/{id}/zwrot-do-dostawcy` | MANAGER, ADMIN | Zlecenie zwrotu do dostawcy (demo)                      |
 
 
 ## Status warstwy security (stan biezacy)
@@ -167,6 +199,9 @@ Aktualny stan po poprawkach:
 - naprawiono literowke w `JwtFilter` (`userDetails`)
 - usunieto `httpBasic`; autoryzacja API opiera sie o JWT + `JwtFilter`
 - skonfigurowano uzytkownikow demo w `SecurityConfig` (`klient`, `pracownik`, `kierownik`, `admin`, `admin@sklep.pl`)
+- dodano encje domenowe użytkowników (`Uzytkownik` jako abstrakcja + `Klient/Pracownik/Kierownik/Administrator`) oraz tokenowanie z wykorzystaniem `hasloHash`
+- dodano podstawowy flow zwrotu (`ZwrotController` + `ZwrotService`) wraz z autoryzacją
+- dodano reklamacje i gwarancje (`ReklamacjaController`, `GwarancjaDostawcyController`) wraz z serwisami domenowymi i testami (wariant minimalny, in-memory)
 
 Weryfikacja lokalna:
 
@@ -176,9 +211,7 @@ Weryfikacja lokalna:
 
 ## Co jeszcze nie jest zaimplementowane
 
-- Encje użytkowników (`Uzytkownik`, `Klient`, `Pracownik`, `Kierownik`, `Administrator`) jako obiekty domenowe z `hasloHash`
-- Zwroty (`Zwrot`, `ZwrotKlient`, `ZwrotObslugaPracownik`, `ZwrotDecyzjaKierownik`)
-- Reklamacje (`Reklamacja`, `GwarancjaDostawcy`, `ZgloszenieProduktowe`)
+- Reklamacje i gwarancje: wersja minimalna (brak pełnego modelowania pozycji i załączników w zgłoszeniach oraz brak pełnej integracji z dalszym łańcuchem dostaw/zwrotów)
 - Logistyka i magazyn (`MagazynPelny`, `ObslugaDostawPracownik`, `ZarzadzanieLogistykaKierownik`)
 - Zarządzanie kontami i personelem
 - Trwały zapis danych (pliki JSON lub baza danych)
