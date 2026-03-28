@@ -8,9 +8,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Zamówienie złożone z pozycji + powiązana sprzedaż i dostawa (struktura jak w diagramie).
- */
 public class Zamowienie {
 
 	private final Long id;
@@ -54,7 +51,6 @@ public class Zamowienie {
 		BigDecimal brutto = linie.stream()
 				.map(PozycjaZamowienia::wartoscBrutto)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
-		// Uproszczenie demo: netto = brutto (VAT doprecyzujesz później)
 		String nrFaktury = "FV/" + id + "/" + dzisiaj.getYear();
 		Sprzedaz sprzedaz = new Sprzedaz(nrFaktury, brutto, brutto, dzisiaj);
 		Dostawa dostawa = new Dostawa(

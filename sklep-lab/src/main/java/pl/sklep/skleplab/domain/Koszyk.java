@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Koszyk — agregat z pozycjami; na razie jeden wspólny koszyk w aplikacji (demo).
- */
 public class Koszyk {
 
 	private final List<PozycjaKoszyka> pozycje = new ArrayList<>();
@@ -52,7 +49,6 @@ public class Koszyk {
 		return Collections.unmodifiableList(pozycje);
 	}
 
-	/** Po złożeniu zamówienia koszyk jest czyszczony (scenariusz z koszyka do zamówienia). */
 	public void wyczysc() {
 		pozycje.clear();
 	}

@@ -1,7 +1,6 @@
-package pl.sklep.skleplab.infrastructure;
+package pl.sklep.skleplab.infrastructure.memory;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,12 +15,12 @@ import pl.sklep.skleplab.domain.Zwrot;
 @Component
 public class InMemoryZwrotRepository implements ZwrotRepository {
 
+	private final AtomicLong kolejnyId = new AtomicLong(1);
 	private final Map<Long, Zwrot> zwroty = new ConcurrentHashMap<>();
-	private final AtomicLong nextId = new AtomicLong(1);
 
 	@Override
 	public long nastepnyId() {
-		return nextId.getAndIncrement();
+		return kolejnyId.getAndIncrement();
 	}
 
 	@Override
@@ -32,9 +31,7 @@ public class InMemoryZwrotRepository implements ZwrotRepository {
 
 	@Override
 	public List<Zwrot> findAll() {
-		List<Zwrot> lista = new ArrayList<>(zwroty.values());
-		lista.sort(Comparator.comparing(Zwrot::getId));
-		return lista;
+		return new ArrayList<>(zwroty.values());
 	}
 
 	@Override
@@ -42,4 +39,3 @@ public class InMemoryZwrotRepository implements ZwrotRepository {
 		return Optional.ofNullable(zwroty.get(id));
 	}
 }
-

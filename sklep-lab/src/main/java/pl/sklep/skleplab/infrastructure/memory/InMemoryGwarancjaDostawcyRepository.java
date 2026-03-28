@@ -1,7 +1,6 @@
-package pl.sklep.skleplab.infrastructure;
+package pl.sklep.skleplab.infrastructure.memory;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,12 +15,12 @@ import pl.sklep.skleplab.domain.GwarancjaDostawcy;
 @Component
 public class InMemoryGwarancjaDostawcyRepository implements GwarancjaDostawcyRepository {
 
+	private final AtomicLong kolejnyId = new AtomicLong(1);
 	private final Map<Long, GwarancjaDostawcy> gwarancje = new ConcurrentHashMap<>();
-	private final AtomicLong nextId = new AtomicLong(1);
 
 	@Override
 	public long nastepnyId() {
-		return nextId.getAndIncrement();
+		return kolejnyId.getAndIncrement();
 	}
 
 	@Override
@@ -32,9 +31,7 @@ public class InMemoryGwarancjaDostawcyRepository implements GwarancjaDostawcyRep
 
 	@Override
 	public List<GwarancjaDostawcy> findAll() {
-		List<GwarancjaDostawcy> lista = new ArrayList<>(gwarancje.values());
-		lista.sort(Comparator.comparing(GwarancjaDostawcy::getId));
-		return lista;
+		return new ArrayList<>(gwarancje.values());
 	}
 
 	@Override
@@ -42,4 +39,3 @@ public class InMemoryGwarancjaDostawcyRepository implements GwarancjaDostawcyRep
 		return Optional.ofNullable(gwarancje.get(id));
 	}
 }
-

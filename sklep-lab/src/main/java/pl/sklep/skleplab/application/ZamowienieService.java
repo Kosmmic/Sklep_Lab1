@@ -5,44 +5,55 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import pl.sklep.skleplab.application.security.ActorContextProvider;
+import pl.sklep.skleplab.application.security.ActorRole;
+import pl.sklep.skleplab.application.security.Authz;
 import pl.sklep.skleplab.domain.MetodaPlatnosci;
 import pl.sklep.skleplab.domain.StatusZamowienia;
 import pl.sklep.skleplab.domain.Zamowienie;
 
-/**
- * Fragment kontraktu jak {@code ProcesZamowieniaKlient}: koszyk → zamówienie.
- * Płatność na razie „w pakiecie” ze złożeniem (demo); później rozdzielisz {@code potwierdzPlatnosc}.
- */
 @Service
 public class ZamowienieService {
 
+	private final ActorContextProvider actorContextProvider;
 	private final KoszykService koszykService;
-	private final ZamowienieRepository zamowienieRepository;
+	private final TowarCatalog towarCatalog;
+	private final Magazyn magazyn;
+	private final SekretarzZamowien sekretarzZamowien;
 
-	public ZamowienieService(KoszykService koszykService, ZamowienieRepository zamowienieRepository) {
+	public ZamowienieService(ActorContextProvider actorContextProvider, KoszykService koszykService,
+			TowarCatalog towarCatalog, Magazyn magazyn, SekretarzZamowien sekretarzZamowien) {
+		this.actorContextProvider = actorContextProvider;
 		this.koszykService = koszykService;
-		this.zamowienieRepository = zamowienieRepository;
+		this.towarCatalog = towarCatalog;
+		this.magazyn = magazyn;
+		this.sekretarzZamowien = sekretarzZamowien;
 	}
 
 	public Zamowienie zlozZamowienie(MetodaPlatnosci metodaPlatnosci) {
+		Authz.requireAnyRole(actorContextProvider.current(), ActorRole.CLIENT);
+		String username = actorContextProvider.current().username();
 		var koszyk = koszykService.pobierzKoszyk();
-		long id = zamowienieRepository.nastepnyId();
+		if (koszyk.jestPusty()) {
+			throw new IllegalStateException("Koszyk jest pusty — nie można złożyć zamówienia");
+		}
+		magazyn.potwierdzPlatnoscIZrealizujSprzedaz(username, koszyk, towarCatalog);
+		long id = sekretarzZamowien.nastepnyIdZamowienia();
 		Zamowienie z = Zamowienie.utworzZKoszyka(id, koszyk, metodaPlatnosci, LocalDate.now());
 		z.setStatusZamowienia(StatusZamowienia.OPLACONE);
-		zamowienieRepository.save(z);
+		sekretarzZamowien.zakolejkujPoPlatnosci(username, z);
 		koszykService.wyczyscKoszyk();
 		return z;
 	}
 
 	public List<Zamowienie> listaZamowien() {
-		return zamowienieRepository.findAll();
+		Authz.requireAnyRole(actorContextProvider.current(), ActorRole.EMPLOYEE, ActorRole.MANAGER, ActorRole.ADMIN);
+		return sekretarzZamowien.pobierzWszystkieZamowienia();
 	}
 
-	/**
-	 * Odpowiednik {@code ProcesowanieZamowien.zatwierdzDoWysylki} — perspektywa pracownika (demo).
-	 */
 	public void zatwierdzDoWysylki(long zamowienieId) {
-		Zamowienie z = zamowienieRepository.findById(zamowienieId)
+		Authz.requireAnyRole(actorContextProvider.current(), ActorRole.EMPLOYEE, ActorRole.MANAGER, ActorRole.ADMIN);
+		Zamowienie z = sekretarzZamowien.znajdzZamowienie(zamowienieId)
 				.orElseThrow(() -> new IllegalArgumentException("Brak zamówienia o id: " + zamowienieId));
 		if (z.getStatusZamowienia() != StatusZamowienia.OPLACONE) {
 			throw new IllegalArgumentException(
@@ -50,6 +61,6 @@ public class ZamowienieService {
 		}
 		z.setStatusZamowienia(StatusZamowienia.WYSLANE);
 		z.getDostawa().setStatusPrzesylki("WYSŁANO");
-		zamowienieRepository.save(z);
+		sekretarzZamowien.zapiszZamowienieWBackendzie(z);
 	}
 }

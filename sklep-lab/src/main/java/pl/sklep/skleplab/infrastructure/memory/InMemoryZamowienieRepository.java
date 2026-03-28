@@ -1,7 +1,6 @@
-package pl.sklep.skleplab.infrastructure;
+package pl.sklep.skleplab.infrastructure.memory;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,12 +15,12 @@ import pl.sklep.skleplab.domain.Zamowienie;
 @Component
 public class InMemoryZamowienieRepository implements ZamowienieRepository {
 
+	private final AtomicLong kolejnyId = new AtomicLong(1);
 	private final Map<Long, Zamowienie> zamowienia = new ConcurrentHashMap<>();
-	private final AtomicLong nextId = new AtomicLong(1);
 
 	@Override
 	public long nastepnyId() {
-		return nextId.getAndIncrement();
+		return kolejnyId.getAndIncrement();
 	}
 
 	@Override
@@ -32,9 +31,7 @@ public class InMemoryZamowienieRepository implements ZamowienieRepository {
 
 	@Override
 	public List<Zamowienie> findAll() {
-		List<Zamowienie> lista = new ArrayList<>(zamowienia.values());
-		lista.sort(Comparator.comparing(Zamowienie::getId));
-		return lista;
+		return new ArrayList<>(zamowienia.values());
 	}
 
 	@Override

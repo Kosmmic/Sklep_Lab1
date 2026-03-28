@@ -18,13 +18,14 @@ Sklep_Lab/
 │   ├── sklep-pelny.md
 │   ├── sklep-zone-01-role.md ... sklep-zone-05-relacje-strukturalne.md
 │   └── sekwencje.md
+├── plany/               Lokalne notatki (ignorowane przez Git)
 ├── sklep-lab/           Aplikacja Spring Boot (kod + testy)
 │   ├── pom.xml
 │   └── src/
 │       ├── main/java/pl/sklep/skleplab/
 │       │   ├── domain/
 │       │   ├── application/
-│       │   ├── infrastructure/
+│       │   ├── infrastructure/   (memory, sekretarz)
 │       │   ├── api/
 │       │   ├── cli/
 │       │   └── security/
@@ -63,12 +64,14 @@ Menu w konsoli pozwala przeglądać towary, dodawać do koszyka, składać zamó
 
 ```
 sklep-lab/src/main/java/pl/sklep/skleplab/
-├── domain/           Encje i reguły biznesowe (bez Springa, bez bazy)
-├── application/      Serwisy (use case) i interfejsy repozytoriów
-├── infrastructure/   Implementacje repozytoriów (na razie w pamięci)
-├── api/              Kontrolery REST i obsługa wyjątków HTTP
-├── cli/              Interfejs tekstowy (profil cli)
-└── security/         Spring Security — role i konfiguracja (tylko tryb web)
+├── domain/              Encje i reguły domenowe (bez Springa)
+├── application/         Serwisy, porty (`TowarCatalog`, `Magazyn`, `SekretarzZamowien`, repozytoria)
+├── infrastructure/
+│   ├── memory/          Adaptery in-memory (katalog, koszyk, zamówienia, zwroty, reklamacje, gwarancje)
+│   └── sekretarz/       Zapis i odczyt zamówień przez `ZamowienieRepository` (fasada use case)
+├── api/                 Kontrolery REST i obsługa wyjątków HTTP
+├── cli/                 Interfejs tekstowy (profil cli)
+└── security/            Spring Security — JWT, role (tryb web)
 ```
 
 ### Klasy domenowe (mapowanie z diagramu `sklep-pelny.md`)
@@ -97,12 +100,17 @@ sklep-lab/src/main/java/pl/sklep/skleplab/
 
 | Klasa / interfejs                  | Odpowiednik w UML                                 | Rola                                                    |
 | ---------------------------------- | ------------------------------------------------- | ------------------------------------------------------- |
-| `TowarCatalog` (interfejs)         | `MagazynPubliczny` (fragment)                     | Dostęp do katalogu towarów                              |
-| `InMemoryTowarCatalog`             | —                                                 | Implementacja: dane w pamięci (3 przykładowe towary)    |
-| `KoszykService`                    | `ProcesZamowieniaKlient` (fragment)               | Dodawanie do koszyka, pobieranie, czyszczenie           |
-| `ZamowienieService`                | `ProcesZamowieniaKlient` + `ProcesowanieZamowien` | Złożenie zamówienia z koszyka, zatwierdzenie do wysyłki |
-| `ZamowienieRepository` (interfejs) | —                                                 | CRUD zamówień (port pod podmianę na pliki/JPA)          |
-| `InMemoryZamowienieRepository`     | —                                                 | Implementacja: dane w pamięci                           |
+| `TowarCatalog` (interfejs)         | `MagazynPubliczny` (fragment)                     | Katalog towarów i zmiana stanu magazynowego po sprzedaży  |
+| `InMemoryTowarCatalog`             | —                                                 | Implementacja w pamięci (przykładowe towary)             |
+| `Magazyn` (interfejs)              | —                                                 | Rezerwacje przy koszyku, realizacja sprzedaży po płatności |
+| `InMemoryMagazyn`                  | —                                                 | Implementacja w pamięci                                 |
+| `KoszykService`                    | `ProcesZamowieniaKlient` (fragment)               | Koszyk per użytkownik, współpraca z `Magazyn`           |
+| `ZamowienieService`                | `ProcesZamowieniaKlient` + `ProcesowanieZamowien` | Złożenie zamówienia, lista, wysyłka                     |
+| `SekretarzZamowien` (interfejs)    | —                                                 | Trwałość i odczyt zamówień (`ZamowienieRepository`)     |
+| `SekretarzZamowienImpl`            | —                                                 | Implementacja w `infrastructure/sekretarz`              |
+| `ZamowienieRepository` (interfejs) | —                                                 | Port zamówień (podmiana na pliki lub JPA)               |
+| `InMemoryZamowienieRepository`     | —                                                 | Implementacja w pamięci                                 |
+| `KoszykRepository` / `InMemoryKoszykRepository` | —                          | Koszyk sesyjny w pamięci                               |
 | `ZwrotService`                     | `ZwrotKlient` / `ZwrotObslugaPracownik` / `ZwrotDecyzjaKierownik` (fragment) | Use case procesu zwrotu |
 | `ZwrotRepository` (interfejs)     | —                                                 | Port dostępu do encji zwrotu                               |
 | `InMemoryZwrotRepository`         | —                                                 | Implementacja: dane w pamięci                           |
@@ -192,16 +200,12 @@ Przykladowa odpowiedz:
 
 ## Status builda
 
-Aktualny stan po poprawkach:
-
-- `.\mvnw.cmd test` przechodzi poprawnie (BUILD SUCCESS)
-- usunieto zaleznosc od Lomboka z `AuthController` i `JwtFilter`
-- naprawiono literowke w `JwtFilter` (`userDetails`)
-- usunieto `httpBasic`; autoryzacja API opiera sie o JWT + `JwtFilter`
-- skonfigurowano uzytkownikow demo w `SecurityConfig` (`klient`, `pracownik`, `kierownik`, `admin`, `admin@sklep.pl`)
-- dodano encje domenowe użytkowników (`Uzytkownik` jako abstrakcja + `Klient/Pracownik/Kierownik/Administrator`) oraz tokenowanie z wykorzystaniem `hasloHash`
-- dodano podstawowy flow zwrotu (`ZwrotController` + `ZwrotService`) wraz z autoryzacją
-- dodano reklamacje i gwarancje (`ReklamacjaController`, `GwarancjaDostawcyController`) wraz z serwisami domenowymi i testami (wariant minimalny, in-memory)
+- `.\mvnw.cmd test` — BUILD SUCCESS
+- Warstwa **Magazyn** (`Magazyn` + `InMemoryMagazyn`): rezerwacje w koszyku i zmniejszenie stanu po opłaceniu zamówienia
+- **Sekretarz zamówień** (`SekretarzZamowien` / `SekretarzZamowienImpl`): delegacja do `ZamowienieRepository`
+- Repozytoria i katalog: `infrastructure/memory` (in-memory)
+- API: JWT (`JwtFilter`), użytkownicy demo w `SecurityConfig`
+- Zwroty, reklamacje, gwarancje: wariant minimalny z repozytoriami w pamięci
 
 Weryfikacja lokalna:
 
@@ -211,11 +215,10 @@ Weryfikacja lokalna:
 
 ## Co jeszcze nie jest zaimplementowane
 
-- Reklamacje i gwarancje: wersja minimalna (brak pełnego modelowania pozycji i załączników w zgłoszeniach oraz brak pełnej integracji z dalszym łańcuchem dostaw/zwrotów)
-- Logistyka i magazyn (`MagazynPelny`, `ObslugaDostawPracownik`, `ZarzadzanieLogistykaKierownik`)
+- Reklamacje i gwarancje: wersja minimalna (brak pełnego modelowania pozycji i załączników oraz integracji z łańcuchem dostaw)
+- Logistyka rozbudowana (`MagazynPelny`, `ObslugaDostawPracownik`, `ZarzadzanieLogistykaKierownik`) — w kodzie jest warstwa `Magazyn` (rezerwacje + stan) i prosta dostawa na zamówieniu
 - Zarządzanie kontami i personelem
-- Trwały zapis danych (pliki JSON lub baza danych)
-- Osobne koszyki per użytkownik
+- Trwały zapis danych (obecnie adaptery **in-memory**; pliki lub baza jako kolejny krok)
 
 ## Dokumentacja modelu
 

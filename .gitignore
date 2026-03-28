@@ -33,6 +33,9 @@ build/
 Thumbs.db
 Desktop.ini
 
+# --- Lokalne notatki / plany ---
+plany/
+
 # --- Logi / tymczasowe ---
 *.log
 *.tmp

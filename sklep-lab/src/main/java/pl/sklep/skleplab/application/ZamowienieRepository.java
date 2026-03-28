@@ -7,7 +7,6 @@ import pl.sklep.skleplab.domain.Zamowienie;
 
 public interface ZamowienieRepository {
 
-	/** Kolejny identyfikator zamówienia (w pamięci — później np. sekwencja w bazie). */
 	long nastepnyId();
 
 	Zamowienie save(Zamowienie zamowienie);
