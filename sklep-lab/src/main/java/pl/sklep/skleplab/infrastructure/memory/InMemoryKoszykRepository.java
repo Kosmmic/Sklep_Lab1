@@ -5,8 +5,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.KoszykRepository;
-import pl.sklep.skleplab.domain.Koszyk;
+import pl.sklep.skleplab.application.port.KoszykRepository;
+import pl.sklep.skleplab.domain.koszyk.Koszyk;
 
 @Component
 public class InMemoryKoszykRepository implements KoszykRepository {

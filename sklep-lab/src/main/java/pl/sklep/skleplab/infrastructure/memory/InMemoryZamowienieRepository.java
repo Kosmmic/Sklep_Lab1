@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.ZamowienieRepository;
-import pl.sklep.skleplab.domain.Zamowienie;
+import pl.sklep.skleplab.application.port.ZamowienieRepository;
+import pl.sklep.skleplab.domain.zamowienie.Zamowienie;
 
 @Component
 public class InMemoryZamowienieRepository implements ZamowienieRepository {

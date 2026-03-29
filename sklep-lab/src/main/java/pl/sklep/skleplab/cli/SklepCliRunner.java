@@ -1,5 +1,6 @@
 package pl.sklep.skleplab.cli;
 
+import java.io.IOException;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
@@ -7,16 +8,24 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.KoszykService;
-import pl.sklep.skleplab.application.TowarCatalog;
-import pl.sklep.skleplab.application.ZamowienieService;
+import pl.sklep.skleplab.application.port.TowarCatalog;
+import pl.sklep.skleplab.application.service.KoszykService;
+import pl.sklep.skleplab.application.service.ZamowienieService;
 import pl.sklep.skleplab.application.security.ActorRole;
-import pl.sklep.skleplab.domain.MetodaPlatnosci;
-import pl.sklep.skleplab.domain.Zamowienie;
+import pl.sklep.skleplab.domain.zamowienie.MetodaPlatnosci;
+import pl.sklep.skleplab.domain.zamowienie.Zamowienie;
 
+/**
+ * CLI: główne menu + podmenu kontekstowe (np. Koszyk).
+ * Kolejne obszary z kilkoma akcjami wokół jednego tematu — ten sam wzorzec: {@code while} + opcja „0” = powrót.
+ */
 @Component
 @Profile("cli")
 public class SklepCliRunner implements CommandLineRunner {
+
+	private static final long TW_MENU_MS = 1500L;
+	private static final long TW_REPLY_MS = 1000L;
+	private static final long TW_PROMPT_MS = 600L;
 
 	private final TowarCatalog towarCatalog;
 	private final KoszykService koszykService;
@@ -34,8 +43,9 @@ public class SklepCliRunner implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) {
+		clearConsole();
 		try (Scanner scanner = new Scanner(System.in)) {
-			System.out.println("=== Sklep CLI (demo) — wpisz numer opcji ===");
+			twLine("=== Sklep CLI (demo) — wpisz numer opcji ===", TW_REPLY_MS);
 			while (true) {
 				wypiszMenu();
 				String linia = scanner.nextLine().trim();
@@ -43,17 +53,34 @@ public class SklepCliRunner implements CommandLineRunner {
 					obsluz(linia, scanner);
 				}
 				catch (NumberFormatException e) {
-					System.out.println("Błąd: oczekiwano liczby.");
+					twLine("Błąd: oczekiwano liczby.", TW_REPLY_MS);
 				}
 				catch (IllegalArgumentException | IllegalStateException e) {
-					System.out.println("Błąd: " + e.getMessage());
+					twLine("Błąd: " + e.getMessage(), TW_REPLY_MS);
 				}
 			}
 		}
 	}
 
+	/** Czyści ekran terminala przed startem (Windows: {@code cls}, pozostałe: {@code clear}; awaria → sekwencja ANSI). */
+	private static void clearConsole() {
+		try {
+			String os = System.getProperty("os.name", "").toLowerCase();
+			ProcessBuilder pb = os.contains("win")
+					? new ProcessBuilder("cmd", "/c", "cls")
+					: new ProcessBuilder("clear");
+			pb.inheritIO();
+			Process p = pb.start();
+			p.waitFor();
+		}
+		catch (IOException | InterruptedException e) {
+			Thread.currentThread().interrupt();
+			System.out.print("\033[H\033[2J");
+			System.out.flush();
+		}
+	}
+
 	private void wypiszMenu() {
-		// „Czyszczenie”/separacja ma być natychmiastowa.
 		System.out.println();
 		var a = actorContextProvider.current();
 		ActorRole effectiveRole = (menuAs != null ? menuAs : a.role());
@@ -69,10 +96,8 @@ public class SklepCliRunner implements CommandLineRunner {
 
 		switch (effectiveRole) {
 			case CLIENT -> sb.append("""
-					1 — lista towarów
-					2 — dodaj do koszyka (id towaru, ilość)
-					3 — pokaż mój koszyk
-					4 — złóż zamówienie (metoda płatności)
+					1 — lista towarów (katalog)
+					2 — Koszyk (podmenu: dodaj, podgląd, zamówienie)
 					9 — zmień aktora/rolę
 					0 — koniec
 					""");
@@ -94,7 +119,25 @@ public class SklepCliRunner implements CommandLineRunner {
 		}
 
 		sb.append("> ");
-		typewriterPrint(sb.toString(), 1500);
+		typewriterPrint(sb.toString(), TW_MENU_MS);
+	}
+
+	private void twLine(String line) {
+		twLine(line, TW_REPLY_MS);
+	}
+
+	private void twLine(String line, long totalDurationMs) {
+		if (line == null) {
+			return;
+		}
+		typewriterPrint(line + System.lineSeparator(), totalDurationMs);
+	}
+
+	private void twPrompt(String prompt) {
+		if (prompt == null || prompt.isEmpty()) {
+			return;
+		}
+		typewriterPrint(prompt, TW_PROMPT_MS);
 	}
 
 	private static void typewriterPrint(String text, long totalDurationMs) {
@@ -104,7 +147,6 @@ public class SklepCliRunner implements CommandLineRunner {
 		long perCharDelayNs = TimeUnit.MILLISECONDS.toNanos(totalDurationMs) / Math.max(1, text.length());
 		for (int i = 0; i < text.length(); i++) {
 			System.out.print(text.charAt(i));
-			// flush rzadziej, żeby nie spowalniać bez sensu na Windows/IDE terminalu
 			if ((i % 40) == 0 || i == text.length() - 1) {
 				System.out.flush();
 			}
@@ -114,7 +156,6 @@ public class SklepCliRunner implements CommandLineRunner {
 				}
 				catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
-					// Jeśli przerwano, dokończ szybko bez animacji.
 					if (i < text.length() - 1) {
 						System.out.print(text.substring(i + 1));
 						System.out.flush();
@@ -129,7 +170,7 @@ public class SklepCliRunner implements CommandLineRunner {
 		ActorRole effectiveRole = (menuAs != null ? menuAs : actorContextProvider.current().role());
 
 		if ("0".equals(linia)) {
-			System.out.println("Do widzenia.");
+			twLine("Do widzenia.", TW_REPLY_MS);
 			System.exit(0);
 		}
 		if ("9".equals(linia)) {
@@ -151,34 +192,80 @@ public class SklepCliRunner implements CommandLineRunner {
 			case "1" -> wypiszTowary();
 			case "2" -> {
 				requireActualRole(ActorRole.CLIENT);
-				System.out.print("id towaru: ");
-				long tid = Long.parseLong(scanner.nextLine().trim());
-				System.out.print("ilość: ");
-				int il = Integer.parseInt(scanner.nextLine().trim());
-				koszykService.dodajDoKoszyka(tid, il);
-				System.out.println("Dodano do koszyka.");
+				podmenuKoszyk(scanner);
 			}
-			case "3" -> {
-				requireActualRole(ActorRole.CLIENT);
-				var k = koszykService.pobierzKoszyk();
-				if (k.jestPusty()) {
-					System.out.println("(koszyk pusty)");
-				}
-				else {
-					k.getPozycje().forEach(p ->
-							System.out.printf("towarId=%d | ilość=%d | cena=%s zł | linia=%s zł%n",
-									p.getTowarId(), p.getIlosc(), p.getCenaWChwiliDodania(), p.wartoscLiniowa()));
-					System.out.println("Suma: " + k.obliczSume() + " zł");
-				}
-			}
-			case "4" -> {
-				requireActualRole(ActorRole.CLIENT);
-				MetodaPlatnosci mp = wyborPlatnosci(scanner);
-				Zamowienie z = zamowienieService.zlozZamowienie(mp);
-				System.out.println("Złożono zamówienie id=" + z.getId() + " | faktura " + z.getSprzedaz().getNrFaktury());
-			}
-			default -> System.out.println("Nieznana opcja.");
+			default -> twLine("Nieznana opcja.");
 		}
+	}
+
+	/**
+	 * Podmenu Koszyk: dodawanie (najpierw stan magazynu), podgląd koszyka, składanie zamówienia.
+	 * Wzór na kolejne podmenu — osobna pętla {@code while}, opcja {@code 0} wraca do menu głównego.
+	 */
+	private void podmenuKoszyk(Scanner scanner) {
+		while (true) {
+			StringBuilder sb = new StringBuilder();
+			sb.append(System.lineSeparator());
+			sb.append("── Podmenu: Koszyk ──").append(System.lineSeparator());
+			sb.append("1 — dodaj do koszyka (najpierw stan magazynu)").append(System.lineSeparator());
+			sb.append("2 — pokaż mój koszyk").append(System.lineSeparator());
+			sb.append("3 — złóż zamówienie").append(System.lineSeparator());
+			sb.append("0 — wróć do menu głównego").append(System.lineSeparator());
+			sb.append("koszyk> ");
+			typewriterPrint(sb.toString(), TW_MENU_MS);
+
+			String linia = scanner.nextLine().trim();
+			try {
+				if ("0".equals(linia)) {
+					twLine("Powrót do menu głównego.");
+					return;
+				}
+				switch (linia) {
+					case "1" -> dodajDoKoszykaZPodglademMagazynu(scanner);
+					case "2" -> pokazMojKoszyk();
+					case "3" -> zlozZamowienieZPodmenu(scanner);
+					default -> twLine("Nieznana opcja w podmenu Koszyk.");
+				}
+			}
+			catch (NumberFormatException e) {
+				twLine("Błąd: oczekiwano liczby.", TW_REPLY_MS);
+			}
+			catch (IllegalArgumentException | IllegalStateException e) {
+				twLine("Błąd: " + e.getMessage(), TW_REPLY_MS);
+			}
+		}
+	}
+
+	private void dodajDoKoszykaZPodglademMagazynu(Scanner scanner) {
+		twLine("Stan magazynu — wybierz id towaru i ilość:");
+		wypiszTowary();
+		twPrompt("id towaru: ");
+		long tid = Long.parseLong(scanner.nextLine().trim());
+		twPrompt("ilość: ");
+		int il = Integer.parseInt(scanner.nextLine().trim());
+		koszykService.dodajDoKoszyka(tid, il);
+		twLine("Dodano do koszyka.");
+	}
+
+	private void pokazMojKoszyk() {
+		var k = koszykService.pobierzKoszyk();
+		if (k.jestPusty()) {
+			twLine("(koszyk pusty)");
+		}
+		else {
+			StringBuilder sb = new StringBuilder();
+			k.getPozycje().forEach(p ->
+					sb.append(String.format("towarId=%d | ilość=%d | cena=%s zł | linia=%s zł%n",
+							p.getTowarId(), p.getIlosc(), p.getCenaWChwiliDodania(), p.wartoscLiniowa())));
+			sb.append("Suma: ").append(k.obliczSume()).append(" zł");
+			typewriterPrint(sb.toString() + System.lineSeparator(), TW_REPLY_MS);
+		}
+	}
+
+	private void zlozZamowienieZPodmenu(Scanner scanner) {
+		MetodaPlatnosci mp = wyborPlatnosci(scanner);
+		Zamowienie z = zamowienieService.zlozZamowienie(mp);
+		twLine("Złożono zamówienie id=" + z.getId() + " | faktura " + z.getSprzedaz().getNrFaktury());
 	}
 
 	private void obsluzPracownik(String linia, Scanner scanner) {
@@ -186,16 +273,29 @@ public class SklepCliRunner implements CommandLineRunner {
 			case "1" -> wypiszTowary();
 			case "2" -> {
 				requireNotClient();
-				zamowienieService.listaZamowien().forEach(this::wypiszZamowienie);
+				StringBuilder sb = new StringBuilder();
+				zamowienieService.listaZamowien().forEach(z ->
+						sb.append(String.format("id=%d | status=%s | płatność=%s | brutto=%s | dostawa=%s%n",
+								z.getId(),
+								z.getStatusZamowienia(),
+								z.getMetodaPlatnosci(),
+								z.getSprzedaz().getKwotaBrutto(),
+								z.getDostawa().getStatusPrzesylki())));
+				if (sb.isEmpty()) {
+					twLine("(brak zamówień)");
+				}
+				else {
+					typewriterPrint(sb.toString(), TW_REPLY_MS);
+				}
 			}
 			case "3" -> {
 				requireNotClient();
-				System.out.print("id zamówienia: ");
+				twPrompt("id zamówienia: ");
 				long zid = Long.parseLong(scanner.nextLine().trim());
 				zamowienieService.zatwierdzDoWysylki(zid);
-				System.out.println("Zamówienie oznaczone jako wysłane.");
+				twLine("Zamówienie oznaczone jako wysłane.");
 			}
-			default -> System.out.println("Nieznana opcja.");
+			default -> twLine("Nieznana opcja.");
 		}
 	}
 
@@ -220,8 +320,8 @@ public class SklepCliRunner implements CommandLineRunner {
 	}
 
 	private void przelaczWidokMenu(Scanner scanner) {
-		System.out.println("Widok menu jako: 0=DOMYŚLNIE 1=KLIENT 2=PRACOWNIK 3=KIEROWNIK 4=ADMIN");
-		System.out.print("wybór: ");
+		twLine("Widok menu jako: 0=DOMYŚLNIE 1=KLIENT 2=PRACOWNIK 3=KIEROWNIK 4=ADMIN");
+		twPrompt("wybór: ");
 		String wybor = scanner.nextLine().trim();
 		menuAs = switch (wybor) {
 			case "0" -> null;
@@ -231,13 +331,20 @@ public class SklepCliRunner implements CommandLineRunner {
 			case "4" -> ActorRole.ADMIN;
 			default -> throw new IllegalArgumentException("Nieprawidłowy wybór.");
 		};
-		System.out.println(menuAs == null ? "Przywrócono domyślny widok menu." : "Ustawiono widok menu jako: " + menuAs);
+		twLine(menuAs == null ? "Przywrócono domyślny widok menu." : "Ustawiono widok menu jako: " + menuAs);
 	}
 
 	private void wypiszTowary() {
+		StringBuilder sb = new StringBuilder();
 		towarCatalog.findAll().forEach(t ->
-				System.out.printf("id=%d | %s | %s zł | stan=%d | %s%n",
-						t.getId(), t.getNazwa(), t.getCena(), t.getStanMagazynowy(), t.getKategoria()));
+				sb.append(String.format("id=%d | %s | %s zł | stan=%d | %s%n",
+						t.getId(), t.getNazwa(), t.getCena(), t.getStanMagazynowy(), t.getKategoria())));
+		if (sb.isEmpty()) {
+			twLine("(brak towarów w katalogu)");
+		}
+		else {
+			typewriterPrint(sb.toString(), TW_REPLY_MS);
+		}
 	}
 
 	private void requireActualRole(ActorRole role) {
@@ -265,8 +372,8 @@ public class SklepCliRunner implements CommandLineRunner {
 	}
 
 	private void zmienAktora(Scanner scanner) {
-		System.out.println("Rola: 1=KLIENT 2=PRACOWNIK 3=KIEROWNIK 4=ADMIN");
-		System.out.print("wybór: ");
+		twLine("Rola: 1=KLIENT 2=PRACOWNIK 3=KIEROWNIK 4=ADMIN");
+		twPrompt("wybór: ");
 		ActorRole role = switch (scanner.nextLine().trim()) {
 			case "1" -> ActorRole.CLIENT;
 			case "2" -> ActorRole.EMPLOYEE;
@@ -274,7 +381,7 @@ public class SklepCliRunner implements CommandLineRunner {
 			case "4" -> ActorRole.ADMIN;
 			default -> throw new IllegalArgumentException("Nieprawidłowy wybór roli.");
 		};
-		System.out.print("username (enter=domyślny): ");
+		twPrompt("username (enter=domyślny): ");
 		String u = scanner.nextLine().trim();
 		if (u.isBlank()) {
 			u = switch (role) {
@@ -285,21 +392,12 @@ public class SklepCliRunner implements CommandLineRunner {
 			};
 		}
 		actorContextProvider.setCurrent(u, role);
-		System.out.println("Ustawiono aktora: " + u + " / " + role);
+		twLine("Ustawiono aktora: " + u + " / " + role);
 	}
 
-	private void wypiszZamowienie(Zamowienie z) {
-		System.out.printf("id=%d | status=%s | płatność=%s | brutto=%s | dostawa=%s%n",
-				z.getId(),
-				z.getStatusZamowienia(),
-				z.getMetodaPlatnosci(),
-				z.getSprzedaz().getKwotaBrutto(),
-				z.getDostawa().getStatusPrzesylki());
-	}
-
-	private static MetodaPlatnosci wyborPlatnosci(Scanner scanner) {
-		System.out.println("Metoda: 1=PRZELEW 2=BLIK 3=KARTA 4=GOTÓWKA przy odbiorze");
-		System.out.print("wybór: ");
+	private MetodaPlatnosci wyborPlatnosci(Scanner scanner) {
+		twLine("Metoda: 1=PRZELEW 2=BLIK 3=KARTA 4=GOTÓWKA przy odbiorze");
+		twPrompt("wybór: ");
 		return switch (scanner.nextLine().trim()) {
 			case "1" -> MetodaPlatnosci.PRZELEW;
 			case "2" -> MetodaPlatnosci.BLIK;

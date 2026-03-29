@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.ReklamacjaRepository;
-import pl.sklep.skleplab.domain.Reklamacja;
+import pl.sklep.skleplab.application.port.ReklamacjaRepository;
+import pl.sklep.skleplab.domain.zgloszenie.Reklamacja;
 
 @Component
 public class InMemoryReklamacjaRepository implements ReklamacjaRepository {

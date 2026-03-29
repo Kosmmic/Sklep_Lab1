@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import pl.sklep.skleplab.application.ZamowienieService;
-import pl.sklep.skleplab.domain.MetodaPlatnosci;
-import pl.sklep.skleplab.domain.Zamowienie;
+import pl.sklep.skleplab.application.service.ZamowienieService;
+import pl.sklep.skleplab.domain.zamowienie.MetodaPlatnosci;
+import pl.sklep.skleplab.domain.zamowienie.Zamowienie;
 
 @RestController
 @RequestMapping("/api/v1/zamowienia")

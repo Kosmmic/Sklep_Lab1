@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import pl.sklep.skleplab.application.TowarCatalog;
-import pl.sklep.skleplab.domain.Towar;
+import pl.sklep.skleplab.application.port.TowarCatalog;
+import pl.sklep.skleplab.domain.katalog.Towar;
 
 @RestController
 @RequestMapping("/api/v1")

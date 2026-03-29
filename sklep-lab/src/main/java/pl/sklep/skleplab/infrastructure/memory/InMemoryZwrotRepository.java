@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.ZwrotRepository;
-import pl.sklep.skleplab.domain.Zwrot;
+import pl.sklep.skleplab.application.port.ZwrotRepository;
+import pl.sklep.skleplab.domain.zwrot.Zwrot;
 
 @Component
 public class InMemoryZwrotRepository implements ZwrotRepository {

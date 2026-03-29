@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.GwarancjaDostawcyRepository;
-import pl.sklep.skleplab.domain.GwarancjaDostawcy;
+import pl.sklep.skleplab.application.port.GwarancjaDostawcyRepository;
+import pl.sklep.skleplab.domain.zgloszenie.GwarancjaDostawcy;
 
 @Component
 public class InMemoryGwarancjaDostawcyRepository implements GwarancjaDostawcyRepository {

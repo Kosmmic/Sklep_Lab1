@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import pl.sklep.skleplab.application.ZwrotService;
-import pl.sklep.skleplab.domain.Zwrot;
+import pl.sklep.skleplab.application.service.ZwrotService;
+import pl.sklep.skleplab.domain.zwrot.Zwrot;
 
 @RestController
 @RequestMapping("/api/v1")

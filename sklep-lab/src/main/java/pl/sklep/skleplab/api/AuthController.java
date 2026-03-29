@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import pl.sklep.skleplab.domain.Administrator;
-import pl.sklep.skleplab.domain.Kierownik;
-import pl.sklep.skleplab.domain.Klient;
-import pl.sklep.skleplab.domain.Pracownik;
-import pl.sklep.skleplab.domain.Rola;
-import pl.sklep.skleplab.domain.Uzytkownik;
+import pl.sklep.skleplab.domain.uzytkownicy.Administrator;
+import pl.sklep.skleplab.domain.uzytkownicy.Kierownik;
+import pl.sklep.skleplab.domain.uzytkownicy.Klient;
+import pl.sklep.skleplab.domain.uzytkownicy.Pracownik;
+import pl.sklep.skleplab.domain.uzytkownicy.Rola;
+import pl.sklep.skleplab.domain.uzytkownicy.Uzytkownik;
 import pl.sklep.skleplab.security.JwtProvider;
 
 @RestController

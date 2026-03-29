@@ -23,8 +23,8 @@ Sklep_Lab/
 │   ├── pom.xml
 │   └── src/
 │       ├── main/java/pl/sklep/skleplab/
-│       │   ├── domain/
-│       │   ├── application/
+│       │   ├── domain/           (katalog, koszyk, zamowienie, …)
+│       │   ├── application/      (service, port, security)
 │       │   ├── infrastructure/   (memory, sekretarz)
 │       │   ├── api/
 │       │   ├── cli/
@@ -48,11 +48,20 @@ Aplikacja startuje na `http://localhost:8080`. Szybki test:
 
 ### Tryb CLI (demo terminalowe, bez serwera HTTP)
 
+Profil `cli` wyłącza osadzony serwer WWW (`spring.main.web-application-type=none`). Uruchomienie z katalogu `sklep-lab`:
+
 ```powershell
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=cli"
 ```
 
-Menu w konsoli pozwala przeglądać towary, dodawać do koszyka, składać zamówienia i zatwierdzać wysyłkę — bez przeglądarki i bez Postmana.
+**Ręczny test (konsola):** przy starcie ekran jest czyszczony (`cls` / `clear`), potem wyświetlane jest menu. Tekst menu i odpowiedzi jest pokazywany z efektem „maszyny do pisania” (domyślnie włączony).
+
+- **Klient (`CLIENT`):** `1` — lista towarów (katalog), `2` — **podmenu Koszyk**, `9` — zmiana aktora/roli, `0` — koniec.
+- **Podmenu Koszyk:** `1` — dodanie do koszyka (najpierw **stan magazynu** jak w katalogu, potem `id` towaru i ilość), `2` — podgląd koszyka, `3` — złożenie zamówienia, `0` — powrót do menu głównego. Kolejne obszary z wieloma akcjami wokół jednego tematu mają ten sam wzorzec (pętla + `0` = wstecz).
+- **Pracownik (`EMPLOYEE`):** `1` — towary, `2` — lista zamówień, `3` — zatwierdzenie wysyłki po `id`, `9` / `0` jak wyżej.
+- **Kierownik / admin (`MANAGER`, `ADMIN`):** jak pracownik oraz `4` — przełączenie widoku menu na inną rolę (symulacja).
+
+Logika biznesowa jest wspólna z REST; w CLI nie ma JWT — aktora ustawia `CliActorContextProvider` (loginy/hasła jak w sekcji kont demo).
 
 ## Jak uruchomic testy
 
@@ -64,8 +73,11 @@ Menu w konsoli pozwala przeglądać towary, dodawać do koszyka, składać zamó
 
 ```
 sklep-lab/src/main/java/pl/sklep/skleplab/
-├── domain/              Encje i reguły domenowe (bez Springa)
-├── application/         Serwisy, porty (`TowarCatalog`, `Magazyn`, `SekretarzZamowien`, repozytoria)
+├── domain/              Encje domenowe (bez Springa), pakiety: `katalog`, `koszyk`, `zamowienie`, `zwrot`, `zgloszenie`, `uzytkownicy`
+├── application/
+│   ├── service/         Serwisy aplikacyjne (`KoszykService`, `ZamowienieService`, …)
+│   ├── port/            Interfejsy (porty): `TowarCatalog`, `Magazyn`, repozytoria, `SekretarzZamowien`
+│   └── security/        Kontekst aktora (`ActorContext`), role, `Authz`
 ├── infrastructure/
 │   ├── memory/          Adaptery in-memory (katalog, koszyk, zamówienia, zwroty, reklamacje, gwarancje)
 │   └── sekretarz/       Zapis i odczyt zamówień przez `ZamowienieRepository` (fasada use case)
@@ -73,6 +85,17 @@ sklep-lab/src/main/java/pl/sklep/skleplab/
 ├── cli/                 Interfejs tekstowy (profil cli)
 └── security/            Spring Security — JWT, role (tryb web)
 ```
+
+**Pakiety `domain` (Java)** — nazwy folderów = fragment pakietu pod `pl.sklep.skleplab.domain`:
+
+| Podfolder   | Przykładowe klasy |
+| ----------- | ----------------- |
+| `katalog`   | `Towar` |
+| `koszyk`    | `Koszyk`, `PozycjaKoszyka` |
+| `zamowienie`| `Zamowienie`, `PozycjaZamowienia`, `Sprzedaz`, `Dostawa`, `MetodaPlatnosci`, `StatusZamowienia` |
+| `zwrot`     | `Zwrot`, `StatusZwrotu` |
+| `zgloszenie`| `ZgloszenieProduktowe`, `Reklamacja`, `GwarancjaDostawcy`, `StatusZgloszeniaProduktowego` |
+| `uzytkownicy` | `Uzytkownik`, `Rola`, `Klient`, `Pracownik`, `Kierownik`, `Administrator` |
 
 ### Klasy domenowe (mapowanie z diagramu `sklep-pelny.md`)
 
@@ -190,17 +213,23 @@ Przykladowa odpowiedz:
 ## Testy
 
 
-| Klasa testowa                | Co sprawdza                                                                        |
-| ---------------------------- | ---------------------------------------------------------------------------------- |
-| `SklepLabApplicationTests`   | Czy kontekst Spring wstaje poprawnie                                               |
-| `ZamowienieTest`             | Logika domeny: tworzenie zamówienia z koszyka, walidacja pustego koszyka           |
-| `ZamowienieServiceTest`      | Serwis: złożenie zamówienia czyści koszyk, zatwierdzenie do wysyłki zmienia status |
-| `ApiSecurityIntegrationTest` | Ochrona endpointów: 401 bez logowania, 403 przy złej roli, 200/201 z poprawną rolą |
+| Klasa testowa                | Pakiet / warstwa | Co sprawdza |
+| ---------------------------- | ---------------- | ----------- |
+| `SklepLabApplicationTests`   | `pl.sklep.skleplab` | Kontekst Spring startuje |
+| `ZamowienieTest`             | `domain.zamowienie` | Zamówienie z koszyka, pusty koszyk |
+| `ZwrotTest`                  | `domain.zwrot` | Przejścia statusów zwrotu |
+| `ReklamacjaTest`             | `domain.zgloszenie` | Reklamacja: weryfikacja przed decyzją |
+| `ZamowienieServiceTest`      | `application.service` | Złożenie zamówienia czyści koszyk, wysyłka |
+| `KoszykServiceVisibilityTest` | `application.service` | Koszyk per użytkownik (alice/bob) |
+| `ApiSecurityIntegrationTest` | `api` | 401 / 403 / poprawne role |
+| `ZwrotSecurityIntegrationTest` | `api` | Ochrona endpointów zwrotów |
+| `ReklamacjaSecurityIntegrationTest` | `api` | Ochrona endpointów reklamacji |
 
 
 ## Status builda
 
 - `.\mvnw.cmd test` — BUILD SUCCESS
+- **Pakietowanie:** encje domenowe w `domain/{katalog,koszyk,zamowienie,zwrot,zgloszenie,uzytkownicy}`; warstwa aplikacji w `application/service` i `application/port` (porty, serwisy)
 - Warstwa **Magazyn** (`Magazyn` + `InMemoryMagazyn`): rezerwacje w koszyku i zmniejszenie stanu po opłaceniu zamówienia
 - **Sekretarz zamówień** (`SekretarzZamowien` / `SekretarzZamowienImpl`): delegacja do `ZamowienieRepository`
 - Repozytoria i katalog: `infrastructure/memory` (in-memory)

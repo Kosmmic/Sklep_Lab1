@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import pl.sklep.skleplab.application.GwarancjaDostawcyService;
-import pl.sklep.skleplab.domain.GwarancjaDostawcy;
-import pl.sklep.skleplab.domain.StatusZgloszeniaProduktowego;
+import pl.sklep.skleplab.application.service.GwarancjaDostawcyService;
+import pl.sklep.skleplab.domain.zgloszenie.GwarancjaDostawcy;
+import pl.sklep.skleplab.domain.zgloszenie.StatusZgloszeniaProduktowego;
 
 @RestController
 @RequestMapping("/api/v1")

@@ -9,8 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.TowarCatalog;
-import pl.sklep.skleplab.domain.Towar;
+import pl.sklep.skleplab.application.port.TowarCatalog;
+import pl.sklep.skleplab.domain.katalog.Towar;
 
 @Component
 public class InMemoryTowarCatalog implements TowarCatalog {

@@ -6,10 +6,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.Magazyn;
-import pl.sklep.skleplab.application.TowarCatalog;
-import pl.sklep.skleplab.domain.Koszyk;
-import pl.sklep.skleplab.domain.PozycjaKoszyka;
+import pl.sklep.skleplab.application.port.Magazyn;
+import pl.sklep.skleplab.application.port.TowarCatalog;
+import pl.sklep.skleplab.domain.koszyk.Koszyk;
+import pl.sklep.skleplab.domain.koszyk.PozycjaKoszyka;
 
 @Component
 public class InMemoryMagazyn implements Magazyn {

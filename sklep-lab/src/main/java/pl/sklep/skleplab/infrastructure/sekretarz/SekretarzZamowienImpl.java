@@ -6,9 +6,9 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
-import pl.sklep.skleplab.application.SekretarzZamowien;
-import pl.sklep.skleplab.application.ZamowienieRepository;
-import pl.sklep.skleplab.domain.Zamowienie;
+import pl.sklep.skleplab.application.port.SekretarzZamowien;
+import pl.sklep.skleplab.application.port.ZamowienieRepository;
+import pl.sklep.skleplab.domain.zamowienie.Zamowienie;
 
 @Component
 public class SekretarzZamowienImpl implements SekretarzZamowien {

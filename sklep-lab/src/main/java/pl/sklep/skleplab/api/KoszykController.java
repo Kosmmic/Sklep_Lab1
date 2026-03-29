@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import pl.sklep.skleplab.application.KoszykService;
-import pl.sklep.skleplab.domain.Koszyk;
-import pl.sklep.skleplab.domain.PozycjaKoszyka;
+import pl.sklep.skleplab.application.service.KoszykService;
+import pl.sklep.skleplab.domain.koszyk.Koszyk;
+import pl.sklep.skleplab.domain.koszyk.PozycjaKoszyka;
 
 @RestController
 @RequestMapping("/api/v1/koszyk")

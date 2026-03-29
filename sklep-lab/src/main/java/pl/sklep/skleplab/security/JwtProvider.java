@@ -9,7 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import pl.sklep.skleplab.domain.Uzytkownik;
+import pl.sklep.skleplab.domain.uzytkownicy.Uzytkownik;
 import java.util.Date;
 
 @Component
